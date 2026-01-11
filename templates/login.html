@@ -1,0 +1,39 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Login — Evidence Chain</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    {% if session.get('user') %}
+<nav>
+  <a href="{{ url_for('index') }}">🏠 Upload</a> |
+  <a href="{{ url_for('verify') }}">🔍 Verify</a> |
+  <a href="{{ url_for('about') }}">ℹ️ About</a> |
+  <a href="{{ url_for('logout') }}">🚪 Logout</a>
+</nav>
+<hr>
+{% else %}
+<nav>
+  <a href="{{ url_for('login') }}">Login</a> |
+  <a href="{{ url_for('signup') }}">Sign Up</a>
+</nav>
+<hr>
+{% endif %}
+
+  <main class="card">
+    <h1>Evidence Chain Integrity Checker - 🧩 A Blockchain-Linked Digital Forensics System with AI-Powered Integrity Verification
+
+</h1>
+    <h1>🔐 Login</h1>
+    {% if message %}<div id="result">{{ message }}</div>{% endif %}
+    <form method="POST">
+      <label>Email<br><input type="email" name="email" required></label>
+      <label>Password<br><input type="password" name="password" required></label>
+      <button type="submit">Login</button>
+    </form>
+    <p>Don’t have an account? <a href="/signup">Sign up here</a></p>
+  </main>
+</body>
+</html>

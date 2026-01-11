@@ -1,0 +1,125 @@
+<!doctype html>
+<html>  
+<head>  
+  <meta charset="utf-8"/>  
+  <title>Evidence Chain — Upload</title>  
+  <link rel="stylesheet" href="/static/style.css">  
+</head>  
+<body>  
+  {% if session.get('user') %}
+<nav>
+  <a href="{{ url_for('index') }}">🏠 Upload</a> |
+  <a href="{{ url_for('verify') }}">🔍 Verify</a> |
+  <a href="{{ url_for('about') }}">ℹ️ About</a> |
+  <a href="{{ url_for('logout') }}">🚪 Logout</a>
+</nav>
+<hr>
+{% else %}
+<nav>
+  <a href="{{ url_for('login') }}">Login</a> |
+  <a href="{{ url_for('signup') }}">Sign Up</a>
+   <a href="{{ url_for('about') }}">ℹ️ About</a> |
+  <a href="{{ url_for('logout') }}">🚪 Logout</a>
+</nav>
+<hr>
+{% endif %}
+
+  <main class="card">  
+    <h1>Evidence Chain — Upload</h1>
+
+    
+
+    <form id="uploadForm" enctype="multipart/form-data">  
+      <label>Uploader name<br/>
+        <input name="uploader" placeholder="Investigator Name" required>
+      </label>  
+      <label>Choose file<br/>
+        <input type="file" name="evidence" required>
+      </label>  
+      <button type="submit">Upload & Register</button>  
+    </form>  
+
+    <div id="result"></div>  
+
+    <hr/>  
+    <a href="/verify">Go to verify page</a>  
+
+    <h3>Recent ledger (demo)</h3>  
+    <div id="ledgerList">Loading...</div>
+  </main>    
+
+  <script>  
+    async function loadLedger(){  
+      try {
+        const res = await fetch('/api/logs');  
+        const js = await res.json();  
+        const el = document.getElementById('ledgerList');  
+        if(!js.ok){ el.textContent = 'Error loading ledger'; return; }  
+        el.innerHTML = '';  
+        js.ledgers.forEach(l => {  
+          const d = document.createElement('div');  
+          d.className = 'ledger-item';  
+          d.textContent = `#${l.ledger_id} ${l.timestamp} — ${l.filename} — block_hash: ${l.block_hash.slice(0,12)}...`;  
+          el.appendChild(d);
+        });  
+      } catch(e) {
+        document.getElementById('ledgerList').textContent = 'Failed to fetch ledger';
+      }
+    }  
+
+    document.getElementById('uploadForm').addEventListener('submit', async (ev) => {  
+      ev.preventDefault();  
+      const f = ev.target.elements['evidence'].files[0];  
+      const uploader = ev.target.elements['uploader'].value || 'unknown';  
+      if(!f) return alert('Please choose a file');  
+
+      const fd = new FormData();  
+      fd.append('evidence', f);  
+      fd.append('uploader', uploader);  
+
+      const out = document.getElementById('result');  
+      out.innerHTML = 'Uploading...';  
+
+      try {
+        const res = await fetch('/api/upload', { method: 'POST', body: fd });  
+        const js = await res.json();  
+
+        if(js.ok){  
+          out.innerHTML = `<pre>Uploaded successfully!
+Evidence ID: ${js.evidence_id}
+File Hash: ${js.file_hash}
+Block Hash: ${js.block_hash}</pre>`;  
+          loadLedger();  
+        } else {  
+          out.textContent = js.error || 'Upload failed';  
+        }
+      } catch(err) {
+        out.textContent = 'Upload error: ' + err.message;
+      }
+    });  
+
+    // Poll for alerts every 5 seconds
+    const shownAlerts = new Set();
+    async function pollAlerts(){
+      try {
+        const res = await fetch('/api/alerts');
+        const js = await res.json();
+        if(js.ok && js.alerts.length){
+          const out = document.getElementById('result');
+          js.alerts.forEach(a => {
+            if(shownAlerts.has(a.ledger_id + a.message)) return;
+            shownAlerts.add(a.ledger_id + a.message);
+            const el = document.createElement('div');
+            el.className = 'alert';
+            el.textContent = `ALERT: ${a.message} (ledger ${a.ledger_id});
+            out.prepend(el)`;
+          });
+        }
+      } catch(e){ console.error(e); }
+    }
+
+    loadLedger();
+    setInterval(pollAlerts, 5000);
+  </script>  
+</body>  
+</html>

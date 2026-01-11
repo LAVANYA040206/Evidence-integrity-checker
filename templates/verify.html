@@ -1,0 +1,122 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Evidence Chain — Verify</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  {% if session.get('user') %}
+<nav>
+  <a href="{{ url_for('index') }}">🏠 Upload</a> |
+  <a href="{{ url_for('verify') }}">🔍 Verify</a> |
+  <a href="{{ url_for('about') }}">ℹ️ About</a> |
+  <a href="{{ url_for('logout') }}">🚪 Logout</a>
+</nav>
+<hr>
+{% else %}
+<nav>
+  <a href="{{ url_for('login') }}">Login</a> |
+  <a href="{{ url_for('signup') }}">Sign Up</a>
+</nav>
+<hr>
+{% endif %}
+
+  <main class="card">
+    <h1>Verify Evidence</h1>
+
+    <!-- Verify by uploading a file -->
+    <section>
+      <h3>Verify by uploading file</h3>
+      <form id="verifyForm">
+        <input type="file" name="evidence" required>
+        <button>Verify</button>
+      </form>
+      <div id="verifyResult"></div>
+    </section>
+
+    <hr/>
+
+    <!-- Verify by evidence ID -->
+    <section>
+      <h3>Verify by evidence id</h3>
+      <form id="idForm">
+        <input name="evidence_id" placeholder="Evidence ID" required>
+        <button>Check</button>
+      </form>
+      <div id="idResult"></div>
+    </section>
+
+    <hr/>
+    <a href="/">Back to Upload Page</a>
+  </main>
+
+  <script>
+    // File verification
+    document.getElementById('verifyForm').addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      const f = ev.target.elements['evidence'].files[0];
+      if(!f) return alert("Please select a file");
+
+      const fd = new FormData();
+      fd.append('evidence', f);
+
+      const res = await fetch('/api/verify', { method: 'POST', body: fd });
+      const js = await res.json();
+      const out = document.getElementById('verifyResult');
+
+      if(js.ok && js.match){
+        out.innerHTML = `<pre>✅ Evidence Verified!
+ID: ${js.record[0]}
+Filename: ${js.record[1]}
+Uploader: ${js.record[2]}
+File Hash: ${js.record[3]}
+Block Hash: ${js.record[4]}
+Timestamp: ${js.record[5]}</pre>`;
+      } 
+      // 🟡 Added for tamper detection
+      else if(js.tampered) {
+        out.innerHTML = "⚠️ File has been tampered! Content does not match original evidence.";
+      }
+      else if(js.ok){
+        out.innerHTML = "❌ No matching evidence found!";
+      } else {
+        out.innerHTML = `Error: ${js.error}`;
+      }
+    });
+
+    // ID verification
+    document.getElementById('idForm').addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      const id = ev.target.elements['evidence_id'].value.trim();
+      if(!id) return alert("Please enter an evidence ID");
+
+      const fd = new FormData();
+      fd.append('evidence_id', id);
+
+      const res = await fetch('/api/verify', { method: 'POST', body: fd });
+      const js = await res.json();
+      const out = document.getElementById('idResult');
+
+      if(js.ok && js.match){
+        out.innerHTML = `<pre>✅ Evidence Verified!
+ID: ${js.record[0]}
+Filename: ${js.record[1]}
+Uploader: ${js.record[2]}
+File Hash: ${js.record[3]}
+Block Hash: ${js.record[4]}
+Timestamp: ${js.record[5]}</pre>`;
+      } 
+      // 🟡 Added for tamper detection
+      else if(js.tampered) {
+        out.innerHTML = "⚠️ File has been tampered! Content does not match original evidence.";
+      }
+      else if(js.ok){
+        out.innerHTML = "❌ No matching evidence found!";
+      } else {
+        out.innerHTML = `Error: ${js.error}`;
+      }
+    });
+  </script>
+</body>
+</html>
